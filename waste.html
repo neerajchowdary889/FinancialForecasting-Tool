@@ -1,0 +1,625 @@
+<!-- templates/forecasting/stock_dashboard.html -->
+{% extends 'base.html' %} {% block content %}
+<div class="container-fluid">
+  <!-- Stock Lookup Section (Existing Functionality) -->
+  <!-- Add this in the form-group section of the stock lookup -->
+  <div class="row mb-3">
+    <!-- <div class="col-md-4">
+      <div class="form-group">
+        <label for="stockSymbol">Stock Symbol</label>
+        <input
+          type="text"
+          id="stockSymbol"
+          class="form-control"
+          placeholder="Enter stock symbol (e.g., AAPL)"
+        />
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="form-group">
+        <label for="chartType">Chart Type</label>
+        <select id="chartType" class="form-control">
+          <option value="candlestick">Candlestick</option>
+          <option value="line">Line Chart</option>
+          <option value="ohlc">OHLC</option>
+          <option value="area">Area Chart</option>
+          <option value="bar">Bar Chart</option>
+        </select>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="form-group">
+        <label for="timePeriod">Time Period</label>
+        <select id="timePeriod" class="form-control">
+          <option value="1d">1 Day</option>
+          <option value="5d">5 Days</option>
+          <option value="1mo">1 Month</option>
+          <option value="3mo">3 Months</option>
+          <option value="6mo">6 Months</option>
+          <option value="1y">1 Year</option>
+          <option value="2y">2 Years</option>
+          <option value="5y">5 Years</option>
+        </select>
+      </div>
+    </div> -->
+  </div>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4>Stock Search & Analysis</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <input
+                  type="text"
+                  id="stockSymbol"
+                  class="form-control"
+                  placeholder="Enter stock symbol (e.g., AAPL)"
+                />
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="chartType">Chart Type</label>
+                  <select id="chartType" class="form-control">
+                    <option value="candlestick">Candlestick</option>
+                    <option value="line">Line Chart</option>
+                    <option value="ohlc">OHLC</option>
+                    <option value="area">Area Chart</option>
+                    <option value="bar">Bar Chart</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group mt-2">
+                <select id="timePeriod" class="form-control">
+                  <option value="1d">1 Day</option>
+                  <option value="5d">5 Days</option>
+                  <option value="1mo">1 Month</option>
+                  <option value="3mo">3 Months</option>
+                  <option value="6mo">6 Months</option>
+                  <option value="1y">1 Year</option>
+                  <option value="2y">2 Years</option>
+                  <option value="5y">5 Years</option>
+                </select>
+              </div>
+              <button onclick="fetchStockDatas()" class="btn btn-primary mt-2">
+                Fetch Data
+              </button>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Current Price</h5>
+                  <h2 id="currentPrice">-</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row mt-4">
+            <div class="col-12">
+              <div id="stockChart" style="height: 400px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Overview Section (New Functionality) -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h3>US Markets</h3>
+      <div class="row">
+        {% for stock in us_stocks %}
+        <div class="col-md-4 mb-4">
+          <div class="card stock-card" onclick="openStockModal('{{ stock }}')">
+            <div class="card-body">
+              <h5 class="card-title">{{ stock }}</h5>
+              <div id="miniChart{{ stock }}" style="height: 150px"></div>
+              <div class="mt-2">
+                <span class="current-price" id="price{{ stock }}"
+                  >Loading...</span
+                >
+                <span class="price-change" id="change{{ stock }}"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <h3>Indian Markets</h3>
+      <div class="row">
+        {% for stock in indian_stocks %}
+        <div class="col-md-4 mb-4">
+          <div class="card stock-card" onclick="openStockModal('{{ stock }}')">
+            <div class="card-body">
+              <h5 class="card-title">{{ stock }}</h5>
+              <div id="miniChart{{ stock }}" style="height: 150px"></div>
+              <div class="mt-2">
+                <span class="current-price" id="price{{ stock }}"
+                  >Loading...</span
+                >
+                <span class="price-change" id="change{{ stock }}"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Detail Modal -->
+  <div class="modal fade" id="stockModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalStockTitle">Stock Details</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <select
+                id="modalChartType"
+                class="form-select"
+                onchange="updateModalChart()"
+              >
+                <option value="line">Line Chart</option>
+                <option value="candlestick">Candlestick Chart</option>
+                <option value="ohlc">OHLC Chart</option>
+                <option value="area">Area Chart</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <select
+                id="modalTimePeriod"
+                class="form-select"
+                onchange="updateModalChart()"
+              >
+                <option value="1d">1 Day</option>
+                <option value="5d">5 Days</option>
+                <option value="1mo">1 Month</option>
+                <option value="3mo">3 Months</option>
+                <option value="6mo">6 Months</option>
+                <option value="1y">1 Year</option>
+              </select>
+            </div>
+          </div>
+          <div id="modalChart" style="height: 600px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .stock-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .stock-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .current-price {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  .price-change {
+    margin-left: 10px;
+  }
+  .price-up {
+    color: #00b894;
+  }
+  .price-down {
+    color: #ff7675;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-control {
+    border-radius: 0.25rem;
+  }
+
+  #stockChart {
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+  }
+
+  label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+  // Existing stock lookup functionality
+  //   function fetchStockDatas() {
+  //     const symbol = document.getElementById("stockSymbol").value;
+  //     const period = document.getElementById("timePeriod").value;
+
+  //     // Fetch current price
+  //     fetch(`/api/stock/${symbol}/price`)
+  //       .then((response) => response.json())
+  //       .then((data) => {
+  //         document.getElementById(
+  //           "currentPrice"
+  //         ).textContent = `$${data.current_price.toFixed(2)}`;
+  //       });
+
+  //     // Fetch historical data
+  //     fetch(`/api/stock/${symbol}/history/${period}`)
+  //       .then((response) => response.json())
+  //       .then((data) => {
+  //         const traces = [
+  //           {
+  //             x: data.data.map((item) => item.Date),
+  //             close: data.data.map((item) => item.Close),
+  //             decreasing: { line: { color: "#ff7675" } },
+  //             high: data.data.map((item) => item.High),
+  //             increasing: { line: { color: "#00b894" } },
+  //             line: { color: "#2d3436" },
+  //             low: data.data.map((item) => item.Low),
+  //             open: data.data.map((item) => item.Open),
+  //             type: "candlestick",
+  //             xaxis: "x",
+  //             yaxis: "y",
+  //           },
+  //         ];
+
+  //         const layout = {
+  //           dragmode: "zoom",
+  //           margin: {
+  //             r: 10,
+  //             t: 25,
+  //             b: 40,
+  //             l: 60,
+  //           },
+  //           showlegend: false,
+  //           xaxis: {
+  //             autorange: true,
+  //             title: "Date",
+  //             type: "date",
+  //           },
+  //           yaxis: {
+  //             autorange: true,
+  //             title: "Price",
+  //             type: "linear",
+  //           },
+  //         };
+
+  //         Plotly.newPlot("stockChart", traces, layout);
+  //       });
+  //   }
+
+  function fetchStockData() {
+    const symbol = document.getElementById("stockSymbol").value;
+    const period = document.getElementById("timePeriod").value;
+    const chartType = document.getElementById("chartType").value;
+
+    // Fetch current price
+    fetch(`/api/stock/${symbol}/price`)
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById(
+          "currentPrice"
+        ).textContent = `$${data.current_price.toFixed(2)}`;
+      });
+
+    // Fetch historical data
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createChart(data.data, chartType);
+      });
+  }
+  function createChart(data, chartType) {
+    let trace;
+
+    switch (chartType) {
+      case "candlestick":
+        trace = {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "candlestick",
+          decreasing: { line: { color: "#ff7675" } },
+          increasing: { line: { color: "#00b894" } },
+          xaxis: "x",
+          yaxis: "y",
+        };
+        break;
+
+      case "line":
+        trace = {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          type: "scatter",
+          mode: "lines",
+          line: {
+            color: "#2d3436",
+            width: 2,
+          },
+        };
+        break;
+
+      case "ohlc":
+        trace = {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "ohlc",
+          decreasing: { line: { color: "#ff7675" } },
+          increasing: { line: { color: "#00b894" } },
+          xaxis: "x",
+          yaxis: "y",
+        };
+        break;
+
+      case "area":
+        trace = {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          fill: "tozeroy",
+          type: "scatter",
+          line: {
+            color: "#2d3436",
+          },
+          fillcolor: "rgba(45, 52, 54, 0.2)",
+        };
+        break;
+
+      case "bar":
+        trace = {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          type: "bar",
+          marker: {
+            color: data.map((item) => {
+              return item.Close >= item.Open ? "#00b894" : "#ff7675";
+            }),
+          },
+        };
+        break;
+    }
+
+    const layout = {
+      dragmode: "zoom",
+      margin: {
+        r: 10,
+        t: 25,
+        b: 40,
+        l: 60,
+      },
+      showlegend: false,
+      xaxis: {
+        autorange: true,
+        title: "Date",
+        type: "date",
+        rangeslider: { visible: false },
+      },
+      yaxis: {
+        autorange: true,
+        title: "Price",
+        type: "linear",
+      },
+      plot_bgcolor: "#fff",
+      paper_bgcolor: "#fff",
+    };
+
+    const config = {
+      responsive: true,
+      scrollZoom: true,
+      modeBarButtonsToRemove: ["lasso2d", "select2d"],
+    };
+
+    Plotly.newPlot("stockChart", [trace], layout, config);
+  }
+
+  document
+    .getElementById("chartType")
+    .addEventListener("change", fetchStockData);
+  document
+    .getElementById("timePeriod")
+    .addEventListener("change", fetchStockData);
+
+  // New market overview functionality
+  const US_STOCKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"];
+  const INDIAN_STOCKS = [
+    "INFY.BO",
+    "RELIANCE.BO",
+    "TCS.BO",
+    "HDFCBANK.BO",
+    "WIPRO.BO",
+  ];
+  let currentStock = "";
+
+  function initializeDashboard() {
+    [...US_STOCKS, ...INDIAN_STOCKS].forEach((stock) => {
+      fetchMiniStockData(stock);
+    });
+  }
+
+  function fetchMiniStockData(symbol, period = "1mo") {
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createMiniChart(symbol, data.data);
+        updateStockPrice(symbol, data.data);
+      });
+  }
+
+  function fetchStockData(symbol, period = "1mo") {
+    // Fetch stock data for mini charts
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createMiniChart(symbol, data.data);
+        updateStockPrice(symbol, data.data);
+      });
+  }
+
+  function createMiniChart(symbol, data) {
+    const trace = {
+      x: data.map((item) => item.Date),
+      y: data.map((item) => item.Close),
+      type: "scatter",
+      mode: "lines",
+      line: {
+        color: "#2d3436",
+        width: 1,
+      },
+    };
+
+    const layout = {
+      margin: { t: 10, r: 10, b: 20, l: 30 },
+      xaxis: {
+        showgrid: false,
+        showticklabels: false,
+      },
+      yaxis: {
+        showgrid: false,
+      },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+    };
+
+    Plotly.newPlot(`miniChart${symbol}`, [trace], layout, {
+      displayModeBar: false,
+    });
+  }
+
+  function updateStockPrice(symbol, data) {
+    const lastPrice = data[data.length - 1].Close;
+    const previousPrice = data[data.length - 2].Close;
+    const change = ((lastPrice - previousPrice) / previousPrice) * 100;
+
+    document.getElementById(
+      `price${symbol}`
+    ).textContent = `$${lastPrice.toFixed(2)}`;
+    const changeElement = document.getElementById(`change${symbol}`);
+    changeElement.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(
+      2
+    )}%`;
+    changeElement.className = `price-change ${
+      change >= 0 ? "price-up" : "price-down"
+    }`;
+  }
+
+  function openStockModal(symbol) {
+    currentStock = symbol;
+    document.getElementById(
+      "modalStockTitle"
+    ).textContent = `${symbol} Stock Details`;
+    const chartType = document.getElementById("chartType").value;
+    const period = document.getElementById("timePeriod").value;
+    fetchDetailedStockData(symbol, chartType, period);
+    new bootstrap.Modal(document.getElementById("stockModal")).show();
+  }
+
+  function fetchDetailedStockData(symbol, chartType, period) {
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createDetailedChart(data.data, chartType);
+      });
+  }
+
+  function createDetailedChart(data, chartType) {
+    let trace;
+
+    switch (chartType) {
+      case "candlestick":
+        trace = {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "candlestick",
+        };
+        break;
+
+      case "ohlc":
+        trace = {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "ohlc",
+        };
+        break;
+
+      case "area":
+        trace = {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          fill: "tozeroy",
+          type: "scatter",
+        };
+        break;
+
+      default: // line chart
+        trace = {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          type: "scatter",
+          mode: "lines",
+        };
+    }
+
+    const layout = {
+      dragmode: "zoom",
+      margin: { r: 10, t: 25, b: 40, l: 60 },
+      showlegend: false,
+      xaxis: {
+        autorange: true,
+        title: "Date",
+        type: "date",
+      },
+      yaxis: {
+        autorange: true,
+        title: "Price",
+        type: "linear",
+      },
+    };
+
+    Plotly.newPlot("modalChart", [trace], layout);
+  }
+
+  function updateChartType() {
+    const chartType = document.getElementById("chartType").value;
+    const period = document.getElementById("timePeriod").value;
+    fetchDetailedStockData(currentStock, chartType, period);
+  }
+
+  function updateChartPeriod() {
+    const chartType = document.getElementById("chartType").value;
+    const period = document.getElementById("timePeriod").value;
+    fetchDetailedStockData(currentStock, chartType, period);
+  }
+
+  // Initialize dashboard when page loads
+  document.addEventListener("DOMContentLoaded", initializeDashboard);
+</script>
+{% endblock %}

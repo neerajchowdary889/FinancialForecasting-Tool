@@ -1,0 +1,46 @@
+<!-- templates/home.html -->
+{% extends 'base.html' %} {% block content %}
+<div class="container">
+  <div class="jumbotron bg-light p-5 rounded-3">
+    <h1 class="display-4">Financial Forecasting Dashboard</h1>
+    <p class="lead">
+      Welcome to your financial forecasting tool. Analyze and predict your
+      financial trends with AI-powered insights.
+    </p>
+    <hr class="my-4" />
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Financial Data</h5>
+            <p class="card-text">View and manage your financial records.</p>
+            <a href="{% url 'add_financial_data' %}" class="btn btn-primary"
+              >Add New Data</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Forecasting</h5>
+            <p class="card-text">Generate AI-powered financial forecasts.</p>
+            <a href="{% url 'generate_forecast' %}" class="btn btn-success"
+              >Generate Forecast</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Analytics</h5>
+            <p class="card-text">View detailed financial analytics.</p>
+            <a href="#" class="btn btn-info">View Analytics</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

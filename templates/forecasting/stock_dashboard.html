@@ -1,0 +1,598 @@
+{% extends 'base.html' %} {% block content %}
+
+<link
+  href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+  rel="stylesheet"
+/>
+<style>
+  .stock-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .stock-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .current-price {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  .price-change {
+    margin-left: 10px;
+  }
+  .price-up {
+    color: #00b894;
+  }
+  .price-down {
+    color: #ff7675;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  .form-control {
+    border-radius: 0.25rem;
+  }
+  #stockChart {
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+    padding: 1rem;
+  }
+  label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  .market-section {
+    position: relative;
+  }
+  .fullscreen-btn {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    z-index: 100;
+  }
+  .fullscreen-section {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: white;
+    z-index: 1000;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .close-fullscreen {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+  }
+  .market-charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+</style>
+
+<div class="container-fluid">
+  <!-- Stock Search Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h4>Stock Search & Analysis</h4>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <input
+                  type="text"
+                  id="stockSymbol"
+                  class="form-control"
+                  placeholder="Enter stock symbol (e.g., AAPL)"
+                />
+              </div>
+              <div class="form-group">
+                <label for="chartType">Chart Type</label>
+                <select id="chartType" class="form-control">
+                  <option value="candlestick">Candlestick</option>
+                  <option value="line">Line Chart</option>
+                  <option value="ohlc">OHLC</option>
+                  <option value="area">Area Chart</option>
+                  <option value="bar">Bar Chart</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="timePeriod">Time Period</label>
+                <select id="timePeriod" class="form-control">
+                  <option value="1d">1 Day</option>
+                  <option value="5d">5 Days</option>
+                  <option value="1mo">1 Month</option>
+                  <option value="3mo">3 Months</option>
+                  <option value="6mo">6 Months</option>
+                  <option value="1y">1 Year</option>
+                  <option value="2y">2 Years</option>
+                  <option value="5y">5 Years</option>
+                </select>
+              </div>
+              <button onclick="fetchStockData()" class="btn btn-primary mt-2">
+                Fetch Data
+              </button>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Current Price</h5>
+                  <h2 id="currentPrice">-</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row mt-4">
+            <div class="col-12">
+              <div id="stockChart" style="height: 400px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US Markets Section -->
+  <div class="row mb-4 market-section" id="usMarketsSection">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3>US Markets</h3>
+        <button
+          class="btn btn-outline-primary fullscreen-btn"
+          onclick="toggleFullscreen('us')"
+        >
+          <i class="bi bi-fullscreen"></i> Fullscreen
+        </button>
+      </div>
+      <div class="row" id="usStocksContainer">
+        <!-- US stocks will be dynamically added here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Indian Markets Section -->
+  <div class="row mb-4 market-section" id="indianMarketsSection">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3>Indian Markets</h3>
+        <button
+          class="btn btn-outline-primary fullscreen-btn"
+          onclick="toggleFullscreen('indian')"
+        >
+          <i class="bi bi-fullscreen"></i> Fullscreen
+        </button>
+      </div>
+      <div class="row" id="indianStocksContainer">
+        <!-- Indian stocks will be dynamically added here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Container -->
+  <div
+    id="fullscreenContainer"
+    style="display: none"
+    class="fullscreen-section"
+  >
+    <button
+      class="btn btn-outline-danger close-fullscreen"
+      onclick="closeFullscreen()"
+    >
+      <i class="bi bi-x-lg"></i> Close
+    </button>
+    <h2 id="fullscreenTitle"></h2>
+    <div id="fullscreenContent" class="market-charts-container"></div>
+  </div>
+
+  <!-- Stock Detail Modal -->
+  <div class="modal fade" id="stockModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalStockTitle">Stock Details</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <select
+                id="modalChartType"
+                class="form-select"
+                onchange="updateModalChart()"
+              >
+                <option value="line">Line Chart</option>
+                <option value="candlestick">Candlestick Chart</option>
+                <option value="ohlc">OHLC Chart</option>
+                <option value="area">Area Chart</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <select
+                id="modalTimePeriod"
+                class="form-select"
+                onchange="updateModalChart()"
+              >
+                <option value="1d">1 Day</option>
+                <option value="5d">5 Days</option>
+                <option value="1mo">1 Month</option>
+                <option value="3mo">3 Months</option>
+                <option value="6mo">6 Months</option>
+                <option value="1y">1 Year</option>
+              </select>
+            </div>
+          </div>
+          <div id="modalChart" style="height: 600px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+  // Constants for stock symbols
+  const US_STOCKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"];
+  const INDIAN_STOCKS = [
+    "INFY.BO",
+    "RELIANCE.BO",
+    "TCS.BO",
+    "HDFCBANK.BO",
+    "WIPRO.BO",
+  ];
+  let currentStock = "";
+  let currentFullscreenMode = null;
+
+  // Initialize dashboard
+  function initializeDashboard() {
+    createStockCards();
+    [...US_STOCKS, ...INDIAN_STOCKS].forEach((stock) => {
+      fetchMiniStockData(stock);
+    });
+  }
+
+  // Create stock cards for both markets
+  function createStockCards() {
+    const usContainer = document.getElementById("usStocksContainer");
+    const indianContainer = document.getElementById("indianStocksContainer");
+
+    US_STOCKS.forEach((stock) => {
+      usContainer.appendChild(createStockCard(stock));
+    });
+
+    INDIAN_STOCKS.forEach((stock) => {
+      indianContainer.appendChild(createStockCard(stock));
+    });
+  }
+
+  // Create individual stock card
+  function createStockCard(symbol) {
+    const col = document.createElement("div");
+    col.className = "col-md-4 mb-4";
+    col.innerHTML = `
+        <div class="card stock-card" onclick="openStockModal('${symbol}')">
+            <div class="card-body">
+                <h5 class="card-title">${symbol}</h5>
+                <div id="miniChart${symbol}" style="height: 150px"></div>
+                <div class="mt-2">
+                    <span class="current-price" id="price${symbol}">Loading...</span>
+                    <span class="price-change" id="change${symbol}"></span>
+                </div>
+            </div>
+        </div>
+    `;
+    return col;
+  }
+
+  // Toggle fullscreen mode
+  function toggleFullscreen(market) {
+    const container = document.getElementById("fullscreenContainer");
+    const title = document.getElementById("fullscreenTitle");
+    const content = document.getElementById("fullscreenContent");
+
+    currentFullscreenMode = market;
+    content.innerHTML = "";
+
+    if (market === "us") {
+      title.textContent = "US Markets";
+      US_STOCKS.forEach((stock) => {
+        const chartDiv = createFullscreenChartDiv(stock);
+        content.appendChild(chartDiv);
+        fetchFullscreenStockData(stock);
+      });
+    } else {
+      title.textContent = "Indian Markets";
+      INDIAN_STOCKS.forEach((stock) => {
+        const chartDiv = createFullscreenChartDiv(stock);
+        content.appendChild(chartDiv);
+        fetchFullscreenStockData(stock);
+      });
+    }
+
+    container.style.display = "block";
+  }
+
+  // Create fullscreen chart container
+  function createFullscreenChartDiv(symbol) {
+    const div = document.createElement("div");
+    div.className = "fullscreen-chart-container";
+    div.innerHTML = `
+        <div class="card">
+            <div class="card-body">
+                <h5>${symbol}</h5>
+                <div id="fullscreenChart${symbol}" style="height: 300px"></div>
+                <div class="mt-2">
+                    <span class="current-price" id="fullscreenPrice${symbol}">Loading...</span>
+                    <span class="price-change" id="fullscreenChange${symbol}"></span>
+                </div>
+            </div>
+        </div>
+    `;
+    return div;
+  }
+
+  // Close fullscreen mode
+  function closeFullscreen() {
+    document.getElementById("fullscreenContainer").style.display = "none";
+    currentFullscreenMode = null;
+  }
+
+  // Fetch stock data for main chart
+  function fetchStockData() {
+    const symbol = document.getElementById("stockSymbol").value;
+    if (!symbol) return;
+
+    const period = document.getElementById("timePeriod").value;
+    const chartType = document.getElementById("chartType").value;
+
+    // Fetch current price
+    fetch(`/api/stock/${symbol}/price`)
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById(
+          "currentPrice"
+        ).textContent = `$${data.current_price.toFixed(2)}`;
+      })
+      .catch((error) => console.error("Error fetching price:", error));
+
+    // Fetch historical data
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createChart(data.data, chartType);
+      })
+      .catch((error) => console.error("Error fetching history:", error));
+  }
+
+  // Fetch data for mini charts
+  function fetchMiniStockData(symbol, period = "1mo") {
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createMiniChart(symbol, data.data);
+        updateStockPrice(symbol, data.data);
+      })
+      .catch((error) =>
+        console.error("Error fetching mini chart data:", error)
+      );
+  }
+
+  // Fetch data for fullscreen charts
+  function fetchFullscreenStockData(symbol, period = "1mo") {
+    fetch(`/api/stock/${symbol}/history/${period}`)
+      .then((response) => response.json())
+      .then((data) => {
+        createFullscreenChart(symbol, data.data);
+        updateFullscreenPrice(symbol, data.data);
+      })
+      .catch((error) =>
+        console.error("Error fetching fullscreen data:", error)
+      );
+  }
+
+  // Create main chart
+  function createChart(data, chartType) {
+    let trace = createChartTrace(data, chartType);
+    const layout = createChartLayout();
+
+    Plotly.newPlot("stockChart", [trace], layout, {
+      responsive: true,
+      scrollZoom: true,
+      modeBarButtonsToRemove: ["lasso2d", "select2d"],
+    });
+  }
+
+  // Create mini chart
+  function createMiniChart(symbol, data) {
+    const trace = {
+      x: data.map((item) => item.Date),
+      y: data.map((item) => item.Close),
+      type: "scatter",
+      mode: "lines",
+      line: { color: "#2d3436", width: 1 },
+    };
+
+    const layout = {
+      margin: { t: 10, r: 10, b: 20, l: 30 },
+      xaxis: { showgrid: false, showticklabels: false },
+      yaxis: { showgrid: false },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+    };
+
+    Plotly.newPlot(`miniChart${symbol}`, [trace], layout, {
+      displayModeBar: false,
+    });
+  }
+
+  // Create fullscreen chart
+  function createFullscreenChart(symbol, data) {
+    const trace = {
+      x: data.map((item) => item.Date),
+      y: data.map((item) => item.Close),
+      type: "scatter",
+      mode: "lines",
+      line: { color: "#2d3436", width: 2 },
+    };
+
+    const layout = {
+      margin: { t: 10, r: 10, b: 20, l: 30 },
+      xaxis: { showgrid: true, showticklabels: true },
+      yaxis: { showgrid: true },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+    };
+
+    Plotly.newPlot(`fullscreenChart${symbol}`, [trace], layout, {
+      displayModeBar: false,
+      responsive: true,
+    });
+  }
+
+  // Create chart trace based on type
+  function createChartTrace(data, chartType) {
+    switch (chartType) {
+      case "candlestick":
+        return {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "candlestick",
+          decreasing: { line: { color: "#ff7675" } },
+          increasing: { line: { color: "#00b894" } },
+        };
+      case "line":
+        return {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          type: "scatter",
+          mode: "lines",
+          line: { color: "#2d3436", width: 2 },
+        };
+      case "ohlc":
+        return {
+          x: data.map((item) => item.Date),
+          open: data.map((item) => item.Open),
+          high: data.map((item) => item.High),
+          low: data.map((item) => item.Low),
+          close: data.map((item) => item.Close),
+          type: "ohlc",
+          decreasing: { line: { color: "#ff7675" } },
+          increasing: { line: { color: "#00b894" } },
+        };
+      case "area":
+        return {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          fill: "tozeroy",
+          type: "scatter",
+          line: { color: "#2d3436" },
+          fillcolor: "rgba(45, 52, 54, 0.2)",
+        };
+      case "bar":
+        return {
+          x: data.map((item) => item.Date),
+          y: data.map((item) => item.Close),
+          type: "bar",
+          marker: {
+            color: data.map((item) =>
+              item.Close >= item.Open ? "#00b894" : "#ff7675"
+            ),
+          },
+        };
+    }
+  }
+
+  // Create standard chart layout
+  function createChartLayout() {
+    return {
+      dragmode: "zoom",
+      margin: { r: 10, t: 25, b: 40, l: 60 },
+      showlegend: false,
+      xaxis: {
+        autorange: true,
+        title: "Date",
+        type: "date",
+        rangeslider: { visible: false },
+      },
+      yaxis: {
+        autorange: true,
+        title: "Price",
+        type: "linear",
+      },
+      plot_bgcolor: "#fff",
+      paper_bgcolor: "#fff",
+    };
+  }
+
+  // Update stock price display
+  function updateStockPrice(symbol, data) {
+    const lastPrice = data[data.length - 1].Close;
+    const previousPrice = data[data.length - 2].Close;
+    const change = ((lastPrice - previousPrice) / previousPrice) * 100;
+
+    document.getElementById(
+      `price${symbol}`
+    ).textContent = `$${lastPrice.toFixed(2)}`;
+    const changeElement = document.getElementById(`change${symbol}`);
+    changeElement.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(
+      2
+    )}%`;
+    changeElement.className = `price-change ${
+      change >= 0 ? "price-up" : "price-down"
+    }`;
+  }
+
+  // Update fullscreen price display
+  function updateFullscreenPrice(symbol, data) {
+    const lastPrice = data[data.length - 1].Close;
+    const previousPrice = data[data.length - 2].Close;
+    const change = ((lastPrice - previousPrice) / previousPrice) * 100;
+
+    document.getElementById(
+      `fullscreenPrice${symbol}`
+    ).textContent = `$${lastPrice.toFixed(2)}`;
+    const changeElement = document.getElementById(`fullscreenChange${symbol}`);
+    changeElement.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(
+      2
+    )}%`;
+    changeElement.className = `price-change ${
+      change >= 0 ? "price-up" : "price-down"
+    }`;
+  }
+
+  // Initialize event listeners
+  function initializeEventListeners() {
+    document.getElementById("chartType").addEventListener("change", () => {
+      if (document.getElementById("stockSymbol").value) {
+        fetchStockData();
+      }
+    });
+
+    document.getElementById("timePeriod").addEventListener("change", () => {
+      if (document.getElementById("stockSymbol").value) {
+        fetchStockData();
+      }
+    });
+  }
+
+  // Initialize when DOM is loaded
+  document.addEventListener("DOMContentLoaded", () => {
+    initializeDashboard();
+    initializeEventListeners();
+  });
+</script>
+{% endblock %}

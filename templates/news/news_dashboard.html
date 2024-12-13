@@ -1,0 +1,555 @@
+<!-- templates/news/news_dashboard.html -->
+{% extends 'base.html' %} {% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- News Filter Sidebar -->
+    <div class="col-lg-3">
+      <div class="card sticky-top" style="top: 20px">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">News Filters</h5>
+        </div>
+
+        <div class="card-body">
+          <!-- Search Box -->
+          <div class="mb-4">
+            <label class="form-label">Search Stock News</label>
+            <div class="input-group">
+              <input
+                type="text"
+                id="newsStockSymbol"
+                class="form-control"
+                placeholder="Enter stock symbol"
+              />
+              <button class="btn btn-primary" onclick="searchNews()">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Filters -->
+          <div class="mb-4">
+            <label class="form-label">Quick Filters</label>
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-primary" onclick="loadNews('US')">
+                <i class="fas fa-flag-usa"></i> US Stocks
+              </button>
+              <button class="btn btn-outline-primary" onclick="loadNews('IN')">
+                <i class="fas fa-globe-asia"></i> Indian Stocks
+              </button>
+              <button class="btn btn-outline-secondary" onclick="loadNews()">
+                <i class="fas fa-globe"></i> All News
+              </button>
+            </div>
+          </div>
+
+          <!-- Time Filter -->
+          <div class="mb-4">
+            <label class="form-label">Time Range</label>
+            <select
+              id="timeFilter"
+              class="form-select"
+              onchange="applyTimeFilter()"
+            >
+              <option value="24h">Last 24 Hours</option>
+              <option value="3d">Last 3 Days</option>
+              <option value="7d">Last Week</option>
+              <option value="30d">Last Month</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- News Content -->
+    <div class="col-lg-9">
+      <div class="card">
+        <div class="card-header bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Market News</h4>
+            <div>
+              <button
+                id="taxCalculatorBtn"
+                class="btn btn-primary rounded-circle position-fixed"
+                style="
+                  bottom: 20px;
+                  right: 20px;
+                  width: 50px;
+                  height: 50px;
+                  z-index: 1000;
+                "
+                data-bs-toggle="modal"
+                data-bs-target="#taxCalculatorModal"
+              >
+                <i class="fas fa-calculator"></i>
+              </button>
+
+              <button
+                onclick="toggleViewMode()"
+                class="btn btn-outline-secondary me-2"
+                id="viewModeBtn"
+              >
+                <i class="fas fa-th-list"></i>
+              </button>
+              <button
+                onclick="refreshNews()"
+                class="btn btn-primary"
+                id="refreshBtn"
+              >
+                <i class="fas fa-sync-alt"></i> Refresh News
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- News Container -->
+          <div
+            class="news-container"
+            style="height: calc(100vh - 200px); overflow-y: auto"
+          >
+            <div id="newsContainer" class="row g-0">
+              <!-- News items will be loaded here -->
+            </div>
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="text-center py-5 d-none">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- News Modal -->
+<div class="modal fade" id="newsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newsModalTitle"></h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <!-- News Metadata -->
+        <div class="mb-3">
+          <span class="badge bg-primary" id="newsSymbol"></span>
+          <span class="text-muted mx-2" id="newsDate"></span>
+          <span class="text-muted" id="newsSource"></span>
+        </div>
+        <!-- News Image -->
+        <div id="newsImage" class="mb-3 d-none">
+          <img src="" alt="News Image" class="img-fluid rounded" />
+        </div>
+        <!-- News Content -->
+        <div id="newsContent"></div>
+      </div>
+      <div class="modal-footer">
+        <a
+          href="#"
+          id="fullArticleLink"
+          target="_blank"
+          class="btn btn-primary"
+        >
+          <i class="fas fa-external-link-alt"></i> Read Full Article
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tax Calculator Modal -->
+<div class="modal fade" id="taxCalculatorModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Income Tax Calculator (FY 2023-24)</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="ctcInput" class="form-label">Enter your CTC (₹)</label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input
+              type="number"
+              class="form-control"
+              id="ctcInput"
+              placeholder="Enter annual CTC"
+            />
+          </div>
+        </div>
+        <div id="taxResult" class="d-none">
+          <hr />
+          <div class="row">
+            <div class="col-6">
+              <p class="mb-2">Annual CTC:</p>
+              <p class="mb-2">Income Tax:</p>
+              <p class="mb-2">Net Income:</p>
+              <p class="mb-0">Monthly Take-home:</p>
+            </div>
+            <div class="col-6 text-end">
+              <p class="mb-2" id="annualCTC">₹0</p>
+              <p class="mb-2 text-danger" id="taxAmount">₹0</p>
+              <p class="mb-2 text-success" id="netIncome">₹0</p>
+              <p class="mb-0 text-primary" id="monthlyIncome">₹0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" onclick="calculateTax()">
+          Calculate
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div
+    id="toastNotification"
+    class="toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div class="toast-header">
+      <i class="fas fa-info-circle me-2"></i>
+      <strong class="me-auto">Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastMessage"></div>
+  </div>
+</div>
+
+{% block extra_css %}
+<style>
+  /* Scrollbar Styling */
+  .news-container {
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f5f5f5;
+  }
+
+  .news-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .news-container::-webkit-scrollbar-track {
+    background: #f5f5f5;
+  }
+
+  .news-container::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 3px;
+  }
+
+  /* News Card Styling */
+  .news-card {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-bottom: 1px solid #eee;
+  }
+
+  .news-card:hover {
+    transform: translateY(-2px);
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .news-title {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #2d3436;
+  }
+
+  .news-meta {
+    font-size: 0.8rem;
+  }
+
+  /* Grid View Styling */
+  .grid-view .news-card {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin: 8px;
+  }
+
+  /* Animation */
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+</style>
+{% endblock %} {% block extra_js %}
+<script>
+  let newsModal;
+  let currentFilter = "";
+  let viewMode = "list"; // or 'grid'
+  let toast;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    loadNews();
+    newsModal = new bootstrap.Modal(document.getElementById("newsModal"));
+    toast = new bootstrap.Toast(document.getElementById("toastNotification"));
+
+    // Search on Enter key
+    document
+      .getElementById("newsStockSymbol")
+      .addEventListener("keyup", function (e) {
+        if (e.key === "Enter") {
+          searchNews();
+        }
+      });
+  });
+
+  function loadNews(filter = "") {
+    showLoading(true);
+    currentFilter = filter;
+    let url = "/news/api/headlines/";
+
+    if (filter) {
+      url = `/news/api/stock/${filter}/`;
+    }
+
+    fetch(url)
+      .then((response) => response.json())
+      .then((data) => {
+        renderNews(data.news);
+      })
+      .catch((error) => {
+        showToast("Error loading news", "error");
+      })
+      .finally(() => {
+        showLoading(false);
+      });
+  }
+
+  function renderNews(newsData) {
+    const container = document.getElementById("newsContainer");
+    container.innerHTML = "";
+
+    if (!newsData || newsData.length === 0) {
+      container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">No news articles found</p>
+            </div>
+        `;
+      return;
+    }
+
+    newsData.forEach((news) => {
+      const date = new Date(news.date).toLocaleString();
+      const cardClass = viewMode === "grid" ? "col-md-6 col-lg-4" : "col-12";
+
+      container.innerHTML += `
+            <div class="${cardClass}">
+                <div class="news-card p-3 fade-in" onclick="openNewsModal('${news.id}')">
+                    <div class="news-title mb-2">${news.heading}</div>
+                    <div class="news-meta d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-light text-dark">${news.stock_symbol}</span>
+                            <span class="text-muted ms-2">${news.source}</span>
+                        </div>
+                        <span class="text-muted">${date}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+  }
+
+  function refreshNews() {
+    const refreshBtn = document.getElementById("refreshBtn");
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+
+    fetch("/news/api/refresh/", { method: "POST" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          loadNews(currentFilter);
+          showToast(data.message, "success");
+        }
+      })
+      .catch((error) => {
+        showToast("Error refreshing news", "error");
+      })
+      .finally(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh News';
+      });
+  }
+
+  function searchNews() {
+    const symbol = document
+      .getElementById("newsStockSymbol")
+      .value.trim()
+      .toUpperCase();
+    if (!symbol) {
+      showToast("Please enter a stock symbol", "warning");
+      return;
+    }
+
+    showLoading(true);
+    fetch(`/news/api/search/${symbol}/`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          renderNews(data.news);
+          showToast(data.message, "success");
+        } else {
+          showToast(data.error, "error");
+        }
+      })
+      .catch((error) => {
+        showToast("Error searching news", "error");
+      })
+      .finally(() => {
+        showLoading(false);
+      });
+  }
+
+  function openNewsModal(newsId) {
+    fetch(`/news/api/story/${newsId}/`)
+      .then((response) => response.json())
+      .then((data) => {
+        document.getElementById("newsModalTitle").textContent = data.heading;
+        document.getElementById("newsSymbol").textContent = data.stock_symbol;
+        document.getElementById("newsDate").textContent = new Date(
+          data.date
+        ).toLocaleString();
+        document.getElementById("newsSource").textContent = data.source;
+        document.getElementById("newsContent").innerHTML = data.full_story;
+        document.getElementById("fullArticleLink").href = data.url;
+
+        const newsImage = document.getElementById("newsImage");
+        if (data.image_url) {
+          newsImage.classList.remove("d-none");
+          newsImage.querySelector("img").src = data.image_url;
+        } else {
+          newsImage.classList.add("d-none");
+        }
+
+        newsModal.show();
+      })
+      .catch((error) => {
+        showToast("Error loading article", "error");
+      });
+  }
+
+  function toggleViewMode() {
+    viewMode = viewMode === "list" ? "grid" : "list";
+    const btn = document.getElementById("viewModeBtn");
+    btn.innerHTML =
+      viewMode === "list"
+        ? '<i class="fas fa-th"></i>'
+        : '<i class="fas fa-th-list"></i>';
+
+    const container = document.getElementById("newsContainer");
+    container.className = viewMode === "grid" ? "row g-0 grid-view" : "row g-0";
+    loadNews(currentFilter);
+  }
+
+  function showLoading(show) {
+    const spinner = document.getElementById("loadingSpinner");
+    spinner.classList.toggle("d-none", !show);
+  }
+
+  function showToast(message, type = "info") {
+    const toastEl = document.getElementById("toastNotification");
+    const messageEl = document.getElementById("toastMessage");
+
+    messageEl.textContent = message;
+    toastEl.className = `toast bg-${type === "error" ? "danger" : type}`;
+
+    const toastInstance = new bootstrap.Toast(toastEl);
+    toastInstance.show();
+  }
+
+  function applyTimeFilter() {
+    const timeFilter = document.getElementById("timeFilter").value;
+    // Implement time filtering logic here
+    loadNews(currentFilter);
+  }
+</script>
+<script>
+  function calculateTax() {
+    const ctc = parseFloat(document.getElementById("ctcInput").value);
+    if (!ctc || ctc <= 0) {
+      alert("Please enter a valid CTC amount");
+      return;
+    }
+
+    const tax = calculateIncomeTax(ctc);
+    const netIncome = ctc - tax;
+    const monthlyIncome = netIncome / 12;
+
+    // Display results
+    document.getElementById("taxResult").classList.remove("d-none");
+    document.getElementById("annualCTC").textContent = `₹${ctc.toLocaleString(
+      "en-IN"
+    )}`;
+    document.getElementById("taxAmount").textContent = `₹${tax.toLocaleString(
+      "en-IN"
+    )}`;
+    document.getElementById(
+      "netIncome"
+    ).textContent = `₹${netIncome.toLocaleString("en-IN")}`;
+    document.getElementById(
+      "monthlyIncome"
+    ).textContent = `₹${monthlyIncome.toLocaleString("en-IN")}`;
+  }
+
+  function calculateIncomeTax(totalIncome) {
+    const taxSlabs = [
+      [0, 300000, 0],
+      [300001, 750000, 0.05],
+      [700001, 1000000, 0.1],
+      [1000001, 1200000, 0.15],
+      [1200001, 1500000, 0.2],
+      [1500001, Infinity, 0.3],
+    ];
+
+    let tax = 0;
+    let remainingIncome = totalIncome;
+
+    for (const [lowerLimit, upperLimit, rate] of taxSlabs) {
+      if (remainingIncome > lowerLimit) {
+        const taxableIncome =
+          Math.min(remainingIncome, upperLimit) - lowerLimit;
+        tax += taxableIncome * rate;
+      } else {
+        break;
+      }
+    }
+
+    return Math.round(tax);
+  }
+</script>
+{% endblock %} {% endblock %}

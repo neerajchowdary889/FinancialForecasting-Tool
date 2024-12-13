@@ -12,25 +12,25 @@ This project is a comprehensive financial forecasting and stock analysis tool de
 * Provides a detailed analysis of stock performance over the past year.
 * Displays key metrics such as starting price, current price, 52-week high/low, average daily volume, and price change percentage.
 
-1. **News Integration** :
+2. **News Integration** :
 
 * Integrates with NewsAPI to fetch the latest news articles related to specific stocks.
 * Displays recent news headlines and their publication dates.
 * Analyzes news sentiment to provide insights into market sentiment.
 
-1. **AI-Powered Analysis** :
+3. **AI-Powered Analysis** :
 
 * Utilizes Google Generative AI (Gemini) to generate detailed stock analysis reports.
 * Provides insights into price performance, news sentiment, technical indicators, investment recommendations, and risk factors.
 * Generates a sentiment score to gauge market sentiment.
 
-1. **Financial Forecasting** :
+4. **Financial Forecasting** :
 
 * Generates revenue, expense, and profit forecasts based on historical data.
 * Saves forecast data to the database for future reference.
 * Provides a simplified confidence level for the forecasts.
 
-1. **User-Friendly Interface** :
+5. **User-Friendly Interface** :
 
 * Offers a clean and intuitive dashboard for easy navigation.
 * Displays analysis and forecasts in a visually appealing format.
@@ -51,24 +51,19 @@ This project is a comprehensive financial forecasting and stock analysis tool de
    **git** **clone** **https://github.com/yourusername/financial_forecast**ing.git
 
    **cd** **financial_forecasting**
-
-1. **Install dependencies** :
+2. **Install dependencies** :
 
    **pip** **install** **-r** **requirements.txt**
+3. **Configure API keys** :
 
-1. **Configure API keys** :
-
-* Replace placeholders in the code with your actual API keys for NewsAPI and Google Generative AI.
-
-1. **Run database migrations** :
+   Replace placeholders in the code with your actual API keys for NewsAPI and Google Generative AI.
+4. **Run database migrations** :
 
    **python** **manage.py** **migrate**
-
-1. **Start the development server** :
+5. **Start the development server** :
 
    **python** **manage.py** **runserver**
-
-1. **Access the application** :
+6. **Access the application** :
 
 * Open your web browser and navigate to `http://localhost:8000`.
 
@@ -78,11 +73,3 @@ This project is a comprehensive financial forecasting and stock analysis tool de
 * Use the search functionality to find specific stocks and view their analysis.
 * Check the latest news articles related to your stocks and analyze market sentiment.
 * Generate financial forecasts and save them for future reference.
-
-### Contributing
-
-Contributions are welcome! Please fork the repository and submit a pull request with your changes. Ensure that your code follows the project's coding standards and includes appropriate tests.
-
-### License
-
-This project is licensed under the MIT License. See the LICENSE file for more details.

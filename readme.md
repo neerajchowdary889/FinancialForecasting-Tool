@@ -47,9 +47,6 @@ This project is a comprehensive financial forecasting and stock analysis tool de
 ### Installation and Setup
 
 1. **Clone the repository** :
-
-   **git** **clone** **https://github.com/yourusername/financial_forecast**ing.git
-
    **cd** **financial_forecasting**
 2. **Install dependencies** :
 

@@ -47,20 +47,21 @@ This project is a comprehensive financial forecasting and stock analysis tool de
 ### Installation and Setup
 
 1. **Clone the repository** :
+   
    **cd** **financial_forecasting**
-2. **Install dependencies** :
+3. **Install dependencies** :
 
    **pip** **install** **-r** **requirements.txt**
-3. **Configure API keys** :
+4. **Configure API keys** :
 
    Replace placeholders in the code with your actual API keys for NewsAPI and Google Generative AI.
-4. **Run database migrations** :
+5. **Run database migrations** :
 
    **python** **manage.py** **migrate**
-5. **Start the development server** :
+6. **Start the development server** :
 
    **python** **manage.py** **runserver**
-6. **Access the application** :
+7. **Access the application** :
 
 * Open your web browser and navigate to `http://localhost:8000`.
 
